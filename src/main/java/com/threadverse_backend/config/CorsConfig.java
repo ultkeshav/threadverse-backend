@@ -21,7 +21,7 @@ public class CorsConfig {
                 List.of(
                         "http://localhost:*",
                         "http://127.0.0.1:*",
-                        "https://threadverse-frontend.vercel.app/"
+                        "https://threadverse-frontend.vercel.app"
                 )
         );
 
