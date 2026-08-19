@@ -20,17 +20,11 @@ public class GlobalExceptionHandler {
             ResourceNotFoundException exception,
             HttpServletRequest request) {
 
-        ErrorResponse response = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.NOT_FOUND.value())
-                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
-                .message(exception.getMessage())
-                .path(request.getRequestURI())
-                .build();
-
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(response);
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                request
+        );
     }
 
     @ExceptionHandler(BadRequestException.class)
@@ -38,17 +32,11 @@ public class GlobalExceptionHandler {
             BadRequestException exception,
             HttpServletRequest request) {
 
-        ErrorResponse response = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message(exception.getMessage())
-                .path(request.getRequestURI())
-                .build();
-
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(response);
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage(),
+                request
+        );
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -65,17 +53,11 @@ public class GlobalExceptionHandler {
                 )
                 .collect(Collectors.joining(", "));
 
-        ErrorResponse response = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message(message)
-                .path(request.getRequestURI())
-                .build();
-
-        return ResponseEntity
-                .badRequest()
-                .body(response);
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                message,
+                request
+        );
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -83,34 +65,44 @@ public class GlobalExceptionHandler {
             ConstraintViolationException exception,
             HttpServletRequest request) {
 
-        ErrorResponse response = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message(exception.getMessage())
-                .path(request.getRequestURI())
-                .build();
-
-        return ResponseEntity
-                .badRequest()
-                .body(response);
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage(),
+                request
+        );
     }
 
+    // IMPORTANT: This will expose the actual exception
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(
             Exception exception,
             HttpServletRequest request) {
 
+        // Print the COMPLETE exception in Render logs
+        exception.printStackTrace();
+
+        return buildResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                exception.getMessage(),
+                request
+        );
+    }
+
+    private ResponseEntity<ErrorResponse> buildResponse(
+            HttpStatus status,
+            String message,
+            HttpServletRequest request) {
+
         ErrorResponse response = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
-                .message("An unexpected error occurred")
+                .status(status.value())
+                .error(status.getReasonPhrase())
+                .message(message)
                 .path(request.getRequestURI())
                 .build();
 
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .status(status)
                 .body(response);
     }
 }

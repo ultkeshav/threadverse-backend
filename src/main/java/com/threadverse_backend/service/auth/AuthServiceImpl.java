@@ -10,6 +10,7 @@ import com.threadverse_backend.security.jwt.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -28,10 +29,12 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse register(RegisterRequest request) {
 
+        // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists.");
         }
 
+        // Create normal USER account
         User user = User.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
@@ -43,13 +46,19 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepository.save(user);
 
+        // Create UserDetails with role
         UserDetails userDetails =
                 new org.springframework.security.core.userdetails.User(
                         savedUser.getEmail(),
                         savedUser.getPasswordHash(),
-                        Collections.emptyList()
+                        Collections.singletonList(
+                                new SimpleGrantedAuthority(
+                                        "ROLE_" + savedUser.getRole().name()
+                                )
+                        )
                 );
 
+        // Generate JWT
         String token = jwtService.generateToken(userDetails);
 
         return AuthResponse.builder()
@@ -66,6 +75,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse login(LoginRequest request) {
 
+        // Authenticate email + password
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -73,16 +83,25 @@ public class AuthServiceImpl implements AuthService {
                 )
         );
 
+        // Find user
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("User not found")
+                );
 
+        // Create UserDetails with role
         UserDetails userDetails =
                 new org.springframework.security.core.userdetails.User(
                         user.getEmail(),
                         user.getPasswordHash(),
-                        Collections.emptyList()
+                        Collections.singletonList(
+                                new SimpleGrantedAuthority(
+                                        "ROLE_" + user.getRole().name()
+                                )
+                        )
                 );
 
+        // Generate JWT
         String token = jwtService.generateToken(userDetails);
 
         return AuthResponse.builder()
